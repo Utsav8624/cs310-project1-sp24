@@ -4,11 +4,14 @@ import com.github.cliftonlabs.json_simple.*;
 import com.opencsv.*;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -33,58 +36,189 @@ public class ClassSchedule {
     private final String SUBJECTID_COL_HEADER = "subjectid";
     
     public String convertCsvToJsonString(List<String[]> csv) {
+      // Create iterator for the CSV data
+    Iterator<String[]> iterator = csv.iterator();
+    
+    // Create JSON objects to structure the data
+    JsonObject outerJsonObject = new JsonObject();
+    JsonObject ScheduletypeMap = new JsonObject();
+    JsonObject SubjectMap = new JsonObject();
+    JsonObject CourseMap = new JsonObject();
+    JsonArray SectionList = new JsonArray();
+
+    // Get the headers from the first row of the CSV
+    String[] headers = iterator.next();
+    
+    // Create a map to store the index of each header for quick access
+    HashMap<String, Integer> headerList = new HashMap<>();
+    for (int i = 0; i < headers.length; ++i) {
+        headerList.put(headers[i], i);
+    }
+    
+    String jsonString = "";
+
+    // Process each row of the CSV
+    while (iterator.hasNext()) {
+        // Get the current row
+        String[] currentRow = iterator.next();
         
-        return ""; // remove this!
+        // Extract values from the current row
+        Integer crn = Integer.valueOf(currentRow[headerList.get(CRN_COL_HEADER)]);
+        Integer credit = Integer.valueOf(currentRow[headerList.get(CREDITS_COL_HEADER)]);
+        String num = currentRow[headerList.get(NUM_COL_HEADER)];
+        
+        // Split 'num' into two parts
+        Integer spaceIndex = num.indexOf(' ');
+        String firstPart = num.substring(0, spaceIndex);
+        String secondPart = num.substring(spaceIndex + 1);
+        
+        // Populate ScheduletypeMap and SubjectMap
+        ScheduletypeMap.put(currentRow[headerList.get(TYPE_COL_HEADER)], currentRow[headerList.get(SCHEDULE_COL_HEADER)]);
+        SubjectMap.put(firstPart, currentRow[headerList.get(SUBJECT_COL_HEADER)]);
+        
+        // Populate InnerCourseMap
+        JsonObject InnerCourseMap = new JsonObject();
+        InnerCourseMap.put(SUBJECTID_COL_HEADER, firstPart);
+        InnerCourseMap.put(NUM_COL_HEADER, secondPart);
+        InnerCourseMap.put(DESCRIPTION_COL_HEADER, currentRow[headerList.get(DESCRIPTION_COL_HEADER)]);
+        InnerCourseMap.put(CREDITS_COL_HEADER, credit);
+        CourseMap.put(currentRow[headerList.get(NUM_COL_HEADER)], InnerCourseMap);
+        
+        // Populate InnerSectionMap
+        List<String> instructorList = Arrays.asList(currentRow[headerList.get(INSTRUCTOR_COL_HEADER)].split(", "));
+        JsonObject InnerSectionMap = new JsonObject();
+        InnerSectionMap.put(CRN_COL_HEADER, crn);
+        InnerSectionMap.put(SUBJECTID_COL_HEADER, firstPart);
+        InnerSectionMap.put(NUM_COL_HEADER, secondPart);
+        InnerSectionMap.put(SECTION_COL_HEADER, currentRow[headerList.get(SECTION_COL_HEADER)]);
+        InnerSectionMap.put(TYPE_COL_HEADER, currentRow[headerList.get(TYPE_COL_HEADER)]);
+        InnerSectionMap.put(START_COL_HEADER, currentRow[headerList.get(START_COL_HEADER)]);
+        InnerSectionMap.put(END_COL_HEADER, currentRow[headerList.get(END_COL_HEADER)]);
+        InnerSectionMap.put(DAYS_COL_HEADER, currentRow[headerList.get(DAYS_COL_HEADER)]);
+        InnerSectionMap.put(WHERE_COL_HEADER, currentRow[headerList.get(WHERE_COL_HEADER)]);
+        InnerSectionMap.put(INSTRUCTOR_COL_HEADER, instructorList);
+
+        // Add InnerSectionMap to SectionList
+        SectionList.add(InnerSectionMap);
+
+        // Update outerJsonObject with the latest data
+        outerJsonObject.put("scheduletype", ScheduletypeMap);
+        outerJsonObject.put("subject", SubjectMap);
+        outerJsonObject.put("course", CourseMap);
+        outerJsonObject.put("section", SectionList);
+
+        // Serialize the outerJsonObject to JSON string
+        jsonString = Jsoner.serialize(outerJsonObject);
+    }
+
+    return jsonString;  
+        
         
     }
     
     public String convertJsonToCsvString(JsonObject json) {
         
-        return ""; // remove this!
-        
-    }
-    
-    public JsonObject getJson() {
-        
-        JsonObject json = getJson(getInputFileData(JSON_FILENAME));
-        return json;
-        
-    }
-    
-    public JsonObject getJson(String input) {
-        
-        JsonObject json = null;
-        
-        try {
-            json = (JsonObject)Jsoner.deserialize(input);
+     // Extract JSON objects from the provided JSON
+    JsonArray sections = (JsonArray) json.get("section");
+    JsonObject courses = (JsonObject) json.get("course");
+    JsonObject subjects = (JsonObject) json.get("subject");
+    JsonObject scheduletype = (JsonObject) json.get("scheduletype");
+
+    String csvString="";
+
+    try (StringWriter writer = new StringWriter();
+         CSVWriter csvWriter = new CSVWriter(writer, '\t', '"', '\\', "\n")) {
+
+        // Write CSV headers
+        csvWriter.writeNext(new String[]{"crn", "subject", "num", "description", "section", "type", "credits", "start", "end", "days", "where", "schedule", "instructor"});
+
+        // Iterate over sections and construct CSV rows
+        for (Object sectionObj : sections) {
+            JsonObject section = (JsonObject) sectionObj;
+
+            // Extract relevant data from JSON objects
+            String crn = String.valueOf(section.get(CRN_COL_HEADER));
+            String subjectID = (String) section.get(SUBJECTID_COL_HEADER);
+            String subject = (String) subjects.get(subjectID);
+            String justnum = (String) section.get(NUM_COL_HEADER);
+            String num = subjectID + " " + justnum;
+            JsonObject innercourse = (JsonObject) courses.get(num);
+
+            // Extract inner course details
+            String description = (String) innercourse.get(DESCRIPTION_COL_HEADER);
+            String sectionId = (String) section.get(SECTION_COL_HEADER);
+            String type = (String) section.get(TYPE_COL_HEADER);
+            BigDecimal creditsValue = (BigDecimal) innercourse.get(CREDITS_COL_HEADER);
+            String credits = creditsValue.toString();
+            String start = (String) section.get(START_COL_HEADER);
+            String end = (String) section.get(END_COL_HEADER);
+            String days = (String) section.get(DAYS_COL_HEADER);
+            String where = (String) section.get(WHERE_COL_HEADER);
+            String schedule = (String) scheduletype.get(type); 
+
+            // Extract and format instructor details
+            JsonArray instructorsArray = (JsonArray) section.get(INSTRUCTOR_COL_HEADER);
+            List<String> instructorsList = new ArrayList<>();
+            for (Object instructorObj : instructorsArray) {
+                instructorsList.add(instructorObj.toString());
+            }
+            String instructor = String.join(", ", instructorsList);
+
+            // Write CSV row
+            csvWriter.writeNext(new String[]{crn, subject, num, description, sectionId, type, credits, start, end, days, where, schedule, instructor});
         }
-        catch (Exception e) { e.printStackTrace(); }
-        
-        return json;
-        
+
+        // Convert the CSV writer content to string
+        csvString = writer.toString();
+
+    } catch (IOException e) {
+        e.printStackTrace();
     }
-    
-    public List<String[]> getCsv() {
-        
-        List<String[]> csv = getCsv(getInputFileData(CSV_FILENAME));
-        return csv;
-        
+
+    return csvString;
     }
-    
-    public List<String[]> getCsv(String input) {
-        
-        List<String[]> csv = null;
-        
-        try {
-            
-            CSVReader reader = new CSVReaderBuilder(new StringReader(input)).withCSVParser(new CSVParserBuilder().withSeparator('\t').build()).build();
-            csv = reader.readAll();
-            
+
+        public JsonObject getJson() {
+
+            JsonObject json = getJson(getInputFileData(JSON_FILENAME));
+            return json;
+
         }
-        catch (Exception e) { e.printStackTrace(); }
-        
-        return csv;
-        
+
+        public JsonObject getJson(String input) {
+
+            JsonObject json = null;
+
+            try {
+                json = (JsonObject)Jsoner.deserialize(input);
+            }
+            catch (Exception e) { e.printStackTrace(); }
+
+            return json;
+
+        }
+
+        public List<String[]> getCsv() {
+
+            List<String[]> csv = getCsv(getInputFileData(CSV_FILENAME));
+            return csv;
+
+        }
+
+        public List<String[]> getCsv(String input) {
+
+            List<String[]> csv = null;
+
+            try {
+
+                CSVReader reader = new CSVReaderBuilder(new StringReader(input)).withCSVParser(new CSVParserBuilder().withSeparator('\t').build()).build();
+                csv = reader.readAll();
+
+            }
+            catch (Exception e) { e.printStackTrace(); }
+
+            return csv;
+
     }
     
     public String getCsvString(List<String[]> csv) {
