@@ -8,9 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -41,9 +39,9 @@ public class ClassSchedule {
     
     // Create JSON objects to structure the data
     JsonObject outerJsonObject = new JsonObject();
-    JsonObject ScheduletypeMap = new JsonObject();
-    JsonObject SubjectMap = new JsonObject();
-    JsonObject CourseMap = new JsonObject();
+    JsonObject ScheduletypeObject = new JsonObject();
+    JsonObject SubjectObject = new JsonObject();
+    JsonObject CourseObject = new JsonObject();
     JsonArray SectionList = new JsonArray();
 
     // Get the headers from the first row of the CSV
@@ -72,46 +70,46 @@ public class ClassSchedule {
         String firstPart = num.substring(0, spaceIndex);
         String secondPart = num.substring(spaceIndex + 1);
         
-        // Populate ScheduletypeMap and SubjectMap
-        ScheduletypeMap.put(currentRow[headerList.get(TYPE_COL_HEADER)], currentRow[headerList.get(SCHEDULE_COL_HEADER)]);
-        SubjectMap.put(firstPart, currentRow[headerList.get(SUBJECT_COL_HEADER)]);
+        // Populate ScheduletypeObject and SubjectObject
+        ScheduletypeObject.put(currentRow[headerList.get(TYPE_COL_HEADER)], currentRow[headerList.get(SCHEDULE_COL_HEADER)]);
+        SubjectObject.put(firstPart, currentRow[headerList.get(SUBJECT_COL_HEADER)]);
         
-        // Populate InnerCourseMap
-        JsonObject InnerCourseMap = new JsonObject();
-        InnerCourseMap.put(SUBJECTID_COL_HEADER, firstPart);
-        InnerCourseMap.put(NUM_COL_HEADER, secondPart);
-        InnerCourseMap.put(DESCRIPTION_COL_HEADER, currentRow[headerList.get(DESCRIPTION_COL_HEADER)]);
-        InnerCourseMap.put(CREDITS_COL_HEADER, credit);
-        CourseMap.put(currentRow[headerList.get(NUM_COL_HEADER)], InnerCourseMap);
+        // Populate InnerCourseObject
+        JsonObject InnerCourseObject = new JsonObject();
+        InnerCourseObject.put(SUBJECTID_COL_HEADER, firstPart);
+        InnerCourseObject.put(NUM_COL_HEADER, secondPart);
+        InnerCourseObject.put(DESCRIPTION_COL_HEADER, currentRow[headerList.get(DESCRIPTION_COL_HEADER)]);
+        InnerCourseObject.put(CREDITS_COL_HEADER, credit);
+        CourseObject.put(currentRow[headerList.get(NUM_COL_HEADER)], InnerCourseObject);
         
-        // Populate InnerSectionMap
+        // Populate InnerSectionObject
         List<String> instructorList = Arrays.asList(currentRow[headerList.get(INSTRUCTOR_COL_HEADER)].split(", "));
-        JsonObject InnerSectionMap = new JsonObject();
-        InnerSectionMap.put(CRN_COL_HEADER, crn);
-        InnerSectionMap.put(SUBJECTID_COL_HEADER, firstPart);
-        InnerSectionMap.put(NUM_COL_HEADER, secondPart);
-        InnerSectionMap.put(SECTION_COL_HEADER, currentRow[headerList.get(SECTION_COL_HEADER)]);
-        InnerSectionMap.put(TYPE_COL_HEADER, currentRow[headerList.get(TYPE_COL_HEADER)]);
-        InnerSectionMap.put(START_COL_HEADER, currentRow[headerList.get(START_COL_HEADER)]);
-        InnerSectionMap.put(END_COL_HEADER, currentRow[headerList.get(END_COL_HEADER)]);
-        InnerSectionMap.put(DAYS_COL_HEADER, currentRow[headerList.get(DAYS_COL_HEADER)]);
-        InnerSectionMap.put(WHERE_COL_HEADER, currentRow[headerList.get(WHERE_COL_HEADER)]);
-        InnerSectionMap.put(INSTRUCTOR_COL_HEADER, instructorList);
+        JsonObject InnerSectionObject = new JsonObject();
+        InnerSectionObject.put(CRN_COL_HEADER, crn);
+        InnerSectionObject.put(SUBJECTID_COL_HEADER, firstPart);
+        InnerSectionObject.put(NUM_COL_HEADER, secondPart);
+        InnerSectionObject.put(SECTION_COL_HEADER, currentRow[headerList.get(SECTION_COL_HEADER)]);
+        InnerSectionObject.put(TYPE_COL_HEADER, currentRow[headerList.get(TYPE_COL_HEADER)]);
+        InnerSectionObject.put(START_COL_HEADER, currentRow[headerList.get(START_COL_HEADER)]);
+        InnerSectionObject.put(END_COL_HEADER, currentRow[headerList.get(END_COL_HEADER)]);
+        InnerSectionObject.put(DAYS_COL_HEADER, currentRow[headerList.get(DAYS_COL_HEADER)]);
+        InnerSectionObject.put(WHERE_COL_HEADER, currentRow[headerList.get(WHERE_COL_HEADER)]);
+        InnerSectionObject.put(INSTRUCTOR_COL_HEADER, instructorList);
 
-        // Add InnerSectionMap to SectionList
-        SectionList.add(InnerSectionMap);
+        // Add InnerSectionObject to SectionList
+        SectionList.add(InnerSectionObject);
 
         // Update outerJsonObject with the latest data
-        outerJsonObject.put("scheduletype", ScheduletypeMap);
-        outerJsonObject.put("subject", SubjectMap);
-        outerJsonObject.put("course", CourseMap);
-        outerJsonObject.put("section", SectionList);
-
-        // Serialize the outerJsonObject to JSON string
-        jsonString = Jsoner.serialize(outerJsonObject);
+        outerJsonObject.put("scheduletype", ScheduletypeObject);
+        outerJsonObject.put("subject", SubjectObject);
+        outerJsonObject.put("course", CourseObject);
+        outerJsonObject.put("section", SectionList); 
     }
-
-    return jsonString;  
+    
+    // Serialize the outerJsonObject to JSON string
+    jsonString = Jsoner.serialize(outerJsonObject);
+    
+    return jsonString ;  
         
         
     }
@@ -130,7 +128,7 @@ public class ClassSchedule {
          CSVWriter csvWriter = new CSVWriter(writer, '\t', '"', '\\', "\n")) {
 
         // Write CSV headers
-        csvWriter.writeNext(new String[]{"crn", "subject", "num", "description", "section", "type", "credits", "start", "end", "days", "where", "schedule", "instructor"});
+        csvWriter.writeNext(new String[]{CRN_COL_HEADER, SUBJECT_COL_HEADER, NUM_COL_HEADER, DESCRIPTION_COL_HEADER, SECTION_COL_HEADER, TYPE_COL_HEADER,CREDITS_COL_HEADER,START_COL_HEADER,END_COL_HEADER,DAYS_COL_HEADER ,WHERE_COL_HEADER ,SCHEDULE_COL_HEADER ,INSTRUCTOR_COL_HEADER });// Write CSV headers"credits",
 
         // Iterate over sections and construct CSV rows
         for (Object sectionObj : sections) {
@@ -148,8 +146,7 @@ public class ClassSchedule {
             String description = (String) innercourse.get(DESCRIPTION_COL_HEADER);
             String sectionId = (String) section.get(SECTION_COL_HEADER);
             String type = (String) section.get(TYPE_COL_HEADER);
-            BigDecimal creditsValue = (BigDecimal) innercourse.get(CREDITS_COL_HEADER);
-            String credits = creditsValue.toString();
+            String credits = String.valueOf(innercourse.get(CREDITS_COL_HEADER));
             String start = (String) section.get(START_COL_HEADER);
             String end = (String) section.get(END_COL_HEADER);
             String days = (String) section.get(DAYS_COL_HEADER);
@@ -157,12 +154,7 @@ public class ClassSchedule {
             String schedule = (String) scheduletype.get(type); 
 
             // Extract and format instructor details
-            JsonArray instructorsArray = (JsonArray) section.get(INSTRUCTOR_COL_HEADER);
-            List<String> instructorsList = new ArrayList<>();
-            for (Object instructorObj : instructorsArray) {
-                instructorsList.add(instructorObj.toString());
-            }
-            String instructor = String.join(", ", instructorsList);
+            String instructor = String.join(", ", (List) section.get(INSTRUCTOR_COL_HEADER));
 
             // Write CSV row
             csvWriter.writeNext(new String[]{crn, subject, num, description, sectionId, type, credits, start, end, days, where, schedule, instructor});
